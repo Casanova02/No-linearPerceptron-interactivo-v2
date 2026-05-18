@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="UTF-8">
+<title>Limitaciones de fronteras lineales</title>
+
+<style>
+
+body{
+    font-family: Arial;
+    margin: 20px;
+    background: #f4f4f4;
+    overflow-x: auto;
+}
+
+h1{
+    margin-bottom: 18px;
+    font-size: 2rem;
+    line-height: 1.2;
+}
+
+.helperText{
+    margin-top: -8px;
+    margin-bottom: 18px;
+    font-size: 15px;
+    color: #333;
+    max-width: 1100px;
+}
+
+.mainContainer{
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.rightPanel{
+    min-width: 280px;
+    flex: 1 1 320px;
+    max-width: 420px;
+}
+
+canvas{
+    border: 1px solid black;
+    background: white;
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+.controls{
+    margin-top: 18px;
+}
+
+.topButtons{
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.sliderContainer{
+    margin-bottom: 12px;
+}
+
+input[type="range"]{
+    width: 180px;
+    max-width: 100%;
+}
+
+.metrics{
+    font-size: 18px;
+    background: white;
+    padding: 18px;
+    border-radius: 10px;
+    box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+}
+
+table{
+    margin-top: 18px;
+    border-collapse: collapse;
+    background: white;
+    box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+    width: 100%;
+}
+
+th, td{
+    border: 1px solid black;
+    padding: 10px 14px;
+    text-align: center;
+    font-size: 15px;
+    word-break: break-word;
+}
+
+.legend{
+    margin-top: 18px;
+    background: white;
+    padding: 18px;
+    border-radius: 10px;
+    box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+    font-size: 15px;
+    line-height: 1.45;
+}
+
+button{
+    padding: 10px 18px;
+    font-size: 15px;
+    cursor: pointer;
+    border: none;
+    background: #2c7;
+    color: white;
+    border-radius: 5px;
+}
+
+button:hover{
+    background: #28a745;
+}
+
+button:disabled{
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.neuronsContainer{
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.neuronCard{
+    background: white;
+    padding: 14px;
+    border-radius: 10px;
+    box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+    border-left: 6px solid #2c7;
+}
+
+.neuronHeader{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.neuronTitle{
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.neuronMeta{
+    font-size: 13px;
+    color: #555;
+}
+
+.neuronActions{
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.neuronActions button{
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+.smallNote{
+    margin-top: 8px;
+    font-size: 13px;
+    color: #555;
+    line-height: 1.35;
+}
+
+@media (max-width: 1200px){
+
+    .mainContainer{
+        flex-direction: column;
+    }
+
+    .rightPanel{
+        max-width: 100%;
+        width: 100%;
+    }
+
+    h1{
+        font-size: 1.7rem;
+    }
+}
+
+@media (max-width: 768px){
+
+    body{
+        margin: 12px;
+    }
+
+    h1{
+        font-size: 1.45rem;
+    }
+
+    .metrics{
+        font-size: 16px;
+        padding: 14px;
+    }
+
+    th, td{
+        font-size: 13px;
+        padding: 8px 10px;
+    }
+
+    .legend{
+        font-size: 14px;
+        padding: 14px;
+    }
+
+    button{
+        font-size: 14px;
+        padding: 9px 14px;
+    }
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>Limitaciones de las fronteras lineales</h1>
+
+<p class="helperText">
+    Intente aproximar una frontera circular usando múltiples rectas.
+    Observe cómo incluso muchas neuronas lineales tienen dificultades para representar regiones no lineales complejas.
+</p>
+
+<div class="mainContainer">
+
+    <!-- IZQUIERDA -->
+    <div>
+
+        <canvas id="canvas" width="1000" height="650"></canvas>
+
+        <div class="controls">
+
+            <div class="topButtons">
+                <button id="addNeuronBtn" type="button">Agregar neurona</button>
+                <button id="removeNeuronBtn" type="button">Borrar neurona</button>
+                <button id="newDatasetBtn" type="button">Generar nuevo dataset</button>
+            </div>
+
+            <div id="neuronsContainer" class="neuronsContainer"></div>
+
+            <div class="smallNote">
+
+            <b>¿Qué significa "arriba" o "abajo"?</b><br><br>
+
+            Cada neurona divide el plano usando una recta.
+
+            <ul>
+            <li><b>Arriba:</b> la neurona considera positiva la región sobre la recta.</li>
+            <li><b>Abajo:</b> la neurona considera positiva la región bajo la recta.</li>
+            </ul>
+
+            La región verde final aparece donde TODAS las neuronas se cumplen simultáneamente.
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- DERECHA -->
+    <div class="rightPanel">
+
+        <div class="metrics">
+
+            <div id="equation"></div>
+
+            <br>
+
+            <div style="font-size:13px;color:#555;">
+                Un punto es positivo solo si cumple todas las neuronas.
+            </div>
+
+            <br>
+
+            <div id="accuracy"></div>
+
+        </div>
+
+        <table>
+
+            <tr>
+                <th></th>
+                <th>Predicción positiva</th>
+                <th>Predicción negativa</th>
+            </tr>
+
+            <tr>
+                <th>Clase positiva</th>
+                <td id="tpCell">0</td>
+                <td id="fnCell">0</td>
+            </tr>
+
+            <tr>
+                <th>Clase negativa</th>
+                <td id="fpCell">0</td>
+                <td id="tnCell">0</td>
+            </tr>
+
+        </table>
+
+        <div class="legend">
+
+            <h3>Leyenda</h3>
+
+            <p>🟢 Verde = Verdadero positivo (TP)</p>
+            <p>🔵 Azul = Verdadero negativo (TN)</p>
+            <p>🟡 Amarillo = Falso positivo (FP)</p>
+            <p>🟠 Naranja = Falso negativo (FN)</p>
+
+            <hr>
+
+            <p>🟢 Línea verde = neurona</p>
+            <p>🔴 Línea roja = neurona</p>
+            <p>🟣 Línea morada = neurona</p>
+            <p>🟠 Línea naranja = neurona</p>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+const WIDTH = canvas.width;
+const HEIGHT = canvas.height;
+const SCALE = 40;
+
+const neuronsContainer = document.getElementById("neuronsContainer");
+const addNeuronBtn = document.getElementById("addNeuronBtn");
+const removeNeuronBtn = document.getElementById("removeNeuronBtn");
+const newDatasetBtn = document.getElementById("newDatasetBtn");
+
+const equationText = document.getElementById("equation");
+const accuracyText = document.getElementById("accuracy");
+
+const tpCell = document.getElementById("tpCell");
+const tnCell = document.getElementById("tnCell");
+const fpCell = document.getElementById("fpCell");
+const fnCell = document.getElementById("fnCell");
+
+let points = [];
+let neurons = [];
+
+const neuronColors = [
+    "green",
+    "red",
+    "purple",
+    "orange",
+    "teal",
+    "brown",
+    "crimson",
+    "darkcyan"
+];
+
+function random(min, max){
+    return Math.random() * (max - min) + min;
+}
+
+function fmt(n){
+    return Number(n).toFixed(2);
+}
+
+function toCanvasX(x){
+    return WIDTH/2 + x*SCALE;
+}
+
+function toCanvasY(y){
+    return HEIGHT/2 - y*SCALE;
+}
+
+function drawAxes(){
+
+    ctx.strokeStyle = "#aaa";
+    ctx.lineWidth = 1;
+
+    ctx.beginPath();
+    ctx.moveTo(0, HEIGHT/2);
+    ctx.lineTo(WIDTH, HEIGHT/2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(WIDTH/2, 0);
+    ctx.lineTo(WIDTH/2, HEIGHT);
+    ctx.stroke();
+}
+
+function createNeuron(){
+
+    return {
+        w: +random(-1.5, 1.5).toFixed(2),
+        b: +random(-3, 3).toFixed(2),
+        dir: Math.random() < 0.5 ? 1 : -1,
+        color: neuronColors[neurons.length % neuronColors.length]
+    };
+}
+
+function updateGlobalButtonsState(){
+    removeNeuronBtn.disabled = neurons.length <= 1;
+}
+
+function renderNeuronControls(){
+
+    neuronsContainer.innerHTML = "";
+
+    neurons.forEach((neuron, index) => {
+
+        const card = document.createElement("div");
+        card.className = "neuronCard";
+        card.style.borderLeft = `6px solid ${neuron.color}`;
+
+        const header = document.createElement("div");
+        header.className = "neuronHeader";
+
+        const titleWrap = document.createElement("div");
+
+        const title = document.createElement("div");
+        title.className = "neuronTitle";
+        title.textContent = `Neurona ${index + 1}`;
+
+        const meta = document.createElement("div");
+        meta.className = "neuronMeta";
+        meta.textContent = neuron.dir === 1 ? "Lado positivo: arriba" : "Lado positivo: abajo";
+
+        titleWrap.appendChild(title);
+        titleWrap.appendChild(meta);
+
+        header.appendChild(titleWrap);
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.textContent = "Borrar";
+
+        deleteBtn.addEventListener("click", () => {
+            deleteNeuron(index);
+        });
+
+        header.appendChild(deleteBtn);
+
+        card.appendChild(header);
+
+        const wRow = document.createElement("div");
+        wRow.className = "sliderContainer";
+
+        const wLabel = document.createElement("label");
+        wLabel.innerHTML = "<b>Peso:</b> ";
+
+        const wInput = document.createElement("input");
+        wInput.type = "range";
+        wInput.min = "-5";
+        wInput.max = "5";
+        wInput.step = "0.1";
+        wInput.value = neuron.w;
+
+        const wValue = document.createElement("span");
+        wValue.textContent = fmt(neuron.w);
+
+        wInput.addEventListener("input", () => {
+            neuron.w = parseFloat(wInput.value);
+            wValue.textContent = fmt(neuron.w);
+            draw();
+        });
+
+        wRow.appendChild(wLabel);
+        wRow.appendChild(wInput);
+        wRow.appendChild(wValue);
+
+        const bRow = document.createElement("div");
+        bRow.className = "sliderContainer";
+
+        const bLabel = document.createElement("label");
+        bLabel.innerHTML = "<b>Bias:</b> ";
+
+        const bInput = document.createElement("input");
+        bInput.type = "range";
+        bInput.min = "-10";
+        bInput.max = "10";
+        bInput.step = "0.1";
+        bInput.value = neuron.b;
+
+        const bValue = document.createElement("span");
+        bValue.textContent = fmt(neuron.b);
+
+        bInput.addEventListener("input", () => {
+            neuron.b = parseFloat(bInput.value);
+            bValue.textContent = fmt(neuron.b);
+            draw();
+        });
+
+        bRow.appendChild(bLabel);
+        bRow.appendChild(bInput);
+        bRow.appendChild(bValue);
+
+        const actions = document.createElement("div");
+        actions.className = "neuronActions";
+
+        const flipBtn = document.createElement("button");
+        flipBtn.type = "button";
+
+        flipBtn.textContent =
+            neuron.dir === 1
+            ? "Cambiar a abajo"
+            : "Cambiar a arriba";
+
+        flipBtn.addEventListener("click", () => {
+            neuron.dir *= -1;
+            renderNeuronControls();
+            draw();
+        });
+
+        actions.appendChild(flipBtn);
+
+        const note = document.createElement("div");
+        note.className = "smallNote";
+
+        note.textContent =
+            "Una neurona define una recta. La clase positiva debe cumplir todas las neuronas activas.";
+
+        card.appendChild(wRow);
+        card.appendChild(bRow);
+        card.appendChild(actions);
+        card.appendChild(note);
+
+        neuronsContainer.appendChild(card);
+    });
+
+    updateGlobalButtonsState();
+}
+
+function addNeuron(){
+
+    neurons.push(createNeuron());
+    renderNeuronControls();
+    draw();
+}
+
+function deleteNeuron(index){
+
+    if(neurons.length <= 1){
+        return;
+    }
+
+    neurons.splice(index, 1);
+
+    if(neurons.length === 0){
+        neurons.push(createNeuron());
+    }
+
+    renderNeuronControls();
+    draw();
+}
+
+// NUEVO DATASET CIRCULAR
+
+function hiddenCircle(){
+
+    return {
+
+        cx: random(-2, 2),
+        cy: random(-2, 2),
+
+        radius:
+            random(3.5, 5)
+
+    };
+}
+
+function insideHiddenCircle(x, y, circle){
+
+    const dx = x - circle.cx;
+    const dy = y - circle.cy;
+
+    const dist =
+        Math.sqrt(dx*dx + dy*dy);
+
+    return dist < circle.radius;
+}
+
+function generatePoints(){
+
+    points = [];
+
+    const circle = hiddenCircle();
+
+    const targetPositive = 70;
+    const targetNegative = 70;
+
+    let positives = 0;
+    let negatives = 0;
+
+    let safety = 0;
+
+    while(
+        positives < targetPositive &&
+        safety < 100000
+    ){
+
+        const x = random(-9, 9);
+        const y = random(-7.5, 7.5);
+
+        if(
+            insideHiddenCircle(x, y, circle)
+        ){
+
+            points.push({
+                x,
+                y,
+                label: 1
+            });
+
+            positives++;
+        }
+
+        safety++;
+    }
+
+    safety = 0;
+
+    while(
+        negatives < targetNegative &&
+        safety < 100000
+    ){
+
+        const x = random(-9, 9);
+        const y = random(-7.5, 7.5);
+
+        if(
+            !insideHiddenCircle(x, y, circle)
+        ){
+
+            points.push({
+                x,
+                y,
+                label: -1
+            });
+
+            negatives++;
+        }
+
+        safety++;
+    }
+
+    points.sort(
+        () => Math.random() - 0.5
+    );
+}
+
+function neuronSatisfied(neuron, x, y){
+
+    const lineY = neuron.w * x + neuron.b;
+
+    if(neuron.dir === 1){
+        return y > lineY;
+    }
+
+    return y < lineY;
+}
+
+function pointPositive(x, y){
+    return neurons.every(neuron => neuronSatisfied(neuron, x, y));
+}
+
+function drawDecisionRegions(){
+
+    for(let px = 0; px < WIDTH; px += 8){
+
+        for(let py = 0; py < HEIGHT; py += 8){
+
+            const x = (px - WIDTH/2) / SCALE;
+            const y = (HEIGHT/2 - py) / SCALE;
+
+            if(pointPositive(x, y)){
+                ctx.fillStyle = "rgba(0,255,0,0.08)";
+            }else{
+                ctx.fillStyle = "rgba(0,0,255,0.08)";
+            }
+
+            ctx.fillRect(px, py, 8, 8);
+        }
+    }
+}
+
+function drawLine(neuron){
+
+    const x1 = -20;
+    const y1 = neuron.w * x1 + neuron.b;
+
+    const x2 = 20;
+    const y2 = neuron.w * x2 + neuron.b;
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        toCanvasX(x1),
+        toCanvasY(y1)
+    );
+
+    ctx.lineTo(
+        toCanvasX(x2),
+        toCanvasY(y2)
+    );
+
+    ctx.strokeStyle = neuron.color;
+    ctx.lineWidth = 4;
+    ctx.stroke();
+}
+
+function draw(){
+
+    if(neurons.length === 0){
+        return;
+    }
+
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+    drawDecisionRegions();
+    drawAxes();
+
+    const equationHTML = neurons.map((neuron, index) => {
+
+        const inequality =
+            neuron.dir === 1
+            ? "y &gt;"
+            : "y &lt;";
+
+        const side =
+            neuron.dir === 1
+            ? "arriba"
+            : "abajo";
+
+        return `
+            <span style="color:${neuron.color};font-weight:bold;">
+                Neurona ${index + 1} (${side}):
+            </span><br>
+            ${inequality} ${fmt(neuron.w)}x + ${fmt(neuron.b)}
+        `;
+    }).join("<br><br>");
+
+    equationText.innerHTML = equationHTML;
+
+    let correct = 0;
+
+    let TP = 0;
+    let TN = 0;
+    let FP = 0;
+    let FN = 0;
+
+    for(const p of points){
+
+        const prediction =
+            pointPositive(p.x, p.y)
+            ? 1
+            : -1;
+
+        let color = "black";
+
+        if(prediction === 1 && p.label === 1){
+            TP++;
+            correct++;
+            color = "green";
+        }
+
+        if(prediction === -1 && p.label === -1){
+            TN++;
+            correct++;
+            color = "blue";
+        }
+
+        if(prediction === 1 && p.label === -1){
+            FP++;
+            color = "yellow";
+        }
+
+        if(prediction === -1 && p.label === 1){
+            FN++;
+            color = "orange";
+        }
+
+        const px = toCanvasX(p.x);
+        const py = toCanvasY(p.y);
+
+        ctx.beginPath();
+        ctx.arc(px, py, 7, 0, Math.PI * 2);
+
+        ctx.fillStyle = color;
+        ctx.fill();
+
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+
+    const acc = correct / points.length;
+
+    let precision = 0;
+
+    if(TP + FP > 0){
+        precision = TP / (TP + FP);
+    }
+
+    let recall = 0;
+
+    if(TP + FN > 0){
+        recall = TP / (TP + FN);
+    }
+
+    accuracyText.innerHTML =
+        "<b>Accuracy:</b> " +
+        (acc * 100).toFixed(1) +
+        "%<br><br>" +
+
+        "<b>Precision:</b> " +
+        (precision * 100).toFixed(1) +
+        "%<br><br>" +
+
+        "<b>Recall:</b> " +
+        (recall * 100).toFixed(1) +
+        "%";
+
+    tpCell.innerText = TP;
+    tnCell.innerText = TN;
+    fpCell.innerText = FP;
+    fnCell.innerText = FN;
+
+    neurons.forEach(drawLine);
+}
+
+addNeuronBtn.addEventListener("click", addNeuron);
+
+removeNeuronBtn.addEventListener("click", () => {
+    deleteNeuron(neurons.length - 1);
+});
+
+newDatasetBtn.addEventListener("click", () => {
+    generatePoints();
+    draw();
+});
+
+// Inicialización
+
+neurons.push(createNeuron());
+
+renderNeuronControls();
+generatePoints();
+draw();
+
+</script>
+
+</body>
+</html>
